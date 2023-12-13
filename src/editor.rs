@@ -48,6 +48,10 @@ pub(crate) fn create(
 
             Label::new(cx, "Crush");
             ParamSlider::new(cx, Data::params, |params| &params.crush);
+            Label::new(cx, "Redux");
+            ParamSlider::new(cx, Data::params, |params| &params.redux);
+            Label::new(cx, "Entropy");
+            ParamSlider::new(cx, Data::params, |params| &params.entropy);
         })
         .row_between(Pixels(0.0))
         .child_left(Stretch(1.0))

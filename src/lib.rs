@@ -1,5 +1,6 @@
 use nih_plug::prelude::*;
 use nih_plug_vizia::ViziaState;
+use rand::prelude::*;
 use std::sync::Arc;
 
 mod editor;
@@ -10,12 +11,19 @@ mod editor;
 
 pub struct EntropeRust {
     params: Arc<EntropeRustParams>,
+    gen: rand::rngs::StdRng,
 }
 
 #[derive(Params)]
 struct EntropeRustParams {
     #[id = "crush"]
     pub crush: FloatParam,
+
+    #[id = "redux"]
+    pub redux: IntParam,
+
+    #[id = "entropy"]
+    pub entropy: IntParam,
 
     #[persist = "editor-state"]
     editor_state: Arc<ViziaState>,
@@ -25,6 +33,7 @@ impl Default for EntropeRust {
     fn default() -> Self {
         Self {
             params: Arc::new(EntropeRustParams::default()),
+            gen: StdRng::from_entropy(),
         }
     }
 }
@@ -44,6 +53,8 @@ impl Default for EntropeRustParams {
                     max: 32.0,
                 },
             ),
+            redux: IntParam::new("Redux", 1, IntRange::Linear { min: 1, max: 100 }),
+            entropy: IntParam::new("Entropy", 1, IntRange::Linear { min: 1, max: 100 }),
         }
     }
 }
@@ -96,7 +107,7 @@ impl Plugin for EntropeRust {
     fn initialize(
         &mut self,
         _audio_io_layout: &AudioIOLayout,
-        buffer_config: &BufferConfig,
+        _buffer_config: &BufferConfig,
         _context: &mut impl InitContext<Self>,
     ) -> bool {
         true
@@ -113,16 +124,34 @@ impl Plugin for EntropeRust {
         _aux: &mut AuxiliaryBuffers,
         _context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
-        for channel_samples in buffer.iter_samples() {
-            let crush = self.params.crush.value();
+        let mut crush = self.params.crush.value();
+        let mut redux = self.params.redux.value();
+        let entropy = self.params.entropy.value();
 
-            for sample in channel_samples {
+        if entropy > 1 {
+            let n = self.gen.gen_range(1..entropy);
+            crush = crush / n as f32;
+            redux = redux * n;
+        }
+        let mut reduced: f32 = 0.0;
+
+        for (i, channel_samples) in buffer.iter_samples().enumerate() {
+            for sample in channel_samples.into_iter() {
                 let base: f32 = 2.0;
                 let total_q_levels = base.powf(crush);
 
                 let remainder = *sample % (1.0 / total_q_levels);
 
                 *sample -= remainder;
+
+                if redux > 1 {
+                    let modulo = i as i32 % redux;
+                    if modulo != 0 {
+                        *sample = reduced;
+                    } else {
+                        reduced = *sample;
+                    }
+                }
             }
         }
 
