@@ -125,13 +125,13 @@ impl Plugin for EntropeRust {
         _context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
         let mut crush = self.params.crush.value();
-        let mut redux = self.params.redux.value();
+        let redux = self.params.redux.value();
         let entropy = self.params.entropy.value();
 
         if entropy > 1 {
             let n = self.gen.gen_range(1..entropy);
             crush = crush / n as f32;
-            redux = redux * n;
+            //redux = redux * n;
         }
         let mut reduced: f32 = 0.0;
 
