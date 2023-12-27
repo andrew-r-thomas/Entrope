@@ -5,10 +5,6 @@ use std::sync::Arc;
 
 mod editor;
 
-// This is a shortened version of the gain example with most comments removed, check out
-// https://github.com/robbert-vdh/nih-plug/blob/master/plugins/examples/gain/src/lib.rs to get
-// started
-
 pub struct EntropeRust {
     params: Arc<EntropeRustParams>,
     gen: rand::rngs::StdRng,
@@ -65,7 +61,7 @@ impl Default for EntropeRustParams {
 
 impl Plugin for EntropeRust {
     const NAME: &'static str = "Entrope";
-    const VENDOR: &'static str = "Chameleon Studios";
+    const VENDOR: &'static str = "DIY Studios";
     const URL: &'static str = env!("CARGO_PKG_HOMEPAGE");
     const EMAIL: &'static str = "andrew.r.j.thomas@gmail.com";
 
@@ -133,6 +129,7 @@ impl Plugin for EntropeRust {
         let entropy = self.params.entropy.value();
         let clip = self.params.clip.value();
         let mut clip_max = 0.0;
+        let mut clip_min = 0.0;
 
         if entropy > 1 {
             let n = self.gen.gen_range(1..entropy);
@@ -142,13 +139,18 @@ impl Plugin for EntropeRust {
 
         if clip < 1.0 {
             let mut max: f32 = 0.0;
+            let mut min: f32 = 0.0;
             for sample in buffer.as_slice_immutable().concat() {
                 if sample < max {
                     max = sample
                 }
+                if sample > min {
+                    min = sample
+                }
             }
 
-            clip_max = clip * max
+            clip_max = clip * max;
+            clip_min = clip * min;
         }
 
         // TODO still kinda seems like this is happening per channel
@@ -174,6 +176,9 @@ impl Plugin for EntropeRust {
 
                 if clip_max != 0.0 && *sample < clip_max {
                     *sample = clip_max
+                }
+                if clip_min != 0.0 && *sample > clip_min {
+                    *sample = clip_min
                 }
             }
         }
