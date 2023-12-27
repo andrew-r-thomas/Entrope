@@ -25,6 +25,9 @@ struct EntropeRustParams {
     #[id = "entropy"]
     pub entropy: IntParam,
 
+    #[id = "clip"]
+    pub clip: FloatParam,
+
     #[persist = "editor-state"]
     editor_state: Arc<ViziaState>,
 }
@@ -55,6 +58,7 @@ impl Default for EntropeRustParams {
             ),
             redux: IntParam::new("Redux", 1, IntRange::Linear { min: 1, max: 100 }),
             entropy: IntParam::new("Entropy", 1, IntRange::Linear { min: 1, max: 100 }),
+            clip: FloatParam::new("Clip", 1.0, FloatRange::Linear { min: 0.0, max: 1.0 }),
         }
     }
 }
@@ -127,12 +131,27 @@ impl Plugin for EntropeRust {
         let mut crush = self.params.crush.value();
         let redux = self.params.redux.value();
         let entropy = self.params.entropy.value();
+        let clip = self.params.clip.value();
+        let mut clip_max = 0.0;
 
         if entropy > 1 {
             let n = self.gen.gen_range(1..entropy);
             crush = crush / n as f32;
             //redux = redux * n;
         }
+
+        if clip < 1.0 {
+            let mut max: f32 = 0.0;
+            for sample in buffer.as_slice_immutable().concat() {
+                if sample < max {
+                    max = sample
+                }
+            }
+
+            clip_max = clip * max
+        }
+
+        // TODO still kinda seems like this is happening per channel
         let mut reduced: f32 = 0.0;
 
         for (i, channel_samples) in buffer.iter_samples().enumerate() {
@@ -151,6 +170,10 @@ impl Plugin for EntropeRust {
                     } else {
                         reduced = *sample;
                     }
+                }
+
+                if clip_max != 0.0 && *sample < clip_max {
+                    *sample = clip_max
                 }
             }
         }
