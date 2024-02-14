@@ -31,8 +31,6 @@ pub(crate) fn create(
         }
         .build(cx);
 
-        ResizeHandle::new(cx);
-
         VStack::new(cx, |cx| {
             Label::new(cx, "Entrope")
                 .font_family(vec![FamilyOwned::Name(String::from(
@@ -49,8 +47,8 @@ pub(crate) fn create(
             ParamSlider::new(cx, Data::params, |params| &params.redux);
             Label::new(cx, "Entropy");
             ParamSlider::new(cx, Data::params, |params| &params.entropy);
-            Label::new(cx, "Clip");
-            ParamSlider::new(cx, Data::params, |params| &params.clip);
+            // Label::new(cx, "Clip");
+            // ParamSlider::new(cx, Data::params, |params| &params.clip);
         })
         .row_between(Pixels(0.0))
         .child_left(Stretch(1.0))

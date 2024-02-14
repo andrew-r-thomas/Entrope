@@ -21,9 +21,8 @@ struct EntropeRustParams {
     #[id = "entropy"]
     pub entropy: IntParam,
 
-    #[id = "clip"]
-    pub clip: FloatParam,
-
+    // #[id = "clip"]
+    // pub clip: FloatParam,
     #[persist = "editor-state"]
     editor_state: Arc<ViziaState>,
 }
@@ -54,7 +53,7 @@ impl Default for EntropeRustParams {
             ),
             redux: IntParam::new("Redux", 1, IntRange::Linear { min: 1, max: 100 }),
             entropy: IntParam::new("Entropy", 1, IntRange::Linear { min: 1, max: 100 }),
-            clip: FloatParam::new("Clip", 1.0, FloatRange::Linear { min: 0.0, max: 1.0 }),
+            // clip: FloatParam::new("Clip", 1.0, FloatRange::Linear { min: 0.0, max: 1.0 }),
         }
     }
 }
@@ -122,14 +121,15 @@ impl Plugin for EntropeRust {
         &mut self,
         buffer: &mut Buffer,
         _aux: &mut AuxiliaryBuffers,
-        _context: &mut impl ProcessContext<Self>,
+        context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
         let mut crush = self.params.crush.value();
         let redux = self.params.redux.value();
         let entropy = self.params.entropy.value();
-        let clip = self.params.clip.value();
-        let mut clip_max = 0.0;
-        let mut clip_min = 0.0;
+        // let clip = self.params.clip.value();
+        // let mut clip_max = 0.0;
+        // let mut clip_min = 0.0;
+        let current_rate = context.transport().sample_rate;
 
         if entropy > 1 {
             let n = self.gen.gen_range(1..entropy);
@@ -137,21 +137,21 @@ impl Plugin for EntropeRust {
             //redux = redux * n;
         }
 
-        if clip < 1.0 {
-            let mut max: f32 = 0.0;
-            let mut min: f32 = 0.0;
-            for sample in buffer.as_slice_immutable().concat() {
-                if sample < max {
-                    max = sample
-                }
-                if sample > min {
-                    min = sample
-                }
-            }
+        // if clip < 1.0 {
+        // let mut max: f32 = 0.0;
+        // let mut min: f32 = 0.0;
+        // for sample in buffer.as_slice_immutable().concat() {
+        // if sample < max {
+        // max = sample
+        // }
+        // if sample > min {
+        // min = sample
+        // }
+        // }
 
-            clip_max = clip * max;
-            clip_min = clip * min;
-        }
+        // clip_max = clip * max;
+        // clip_min = clip * min;
+        // }
 
         // TODO still kinda seems like this is happening per channel
         let mut reduced: f32 = 0.0;
@@ -174,12 +174,12 @@ impl Plugin for EntropeRust {
                     }
                 }
 
-                if clip_max != 0.0 && *sample < clip_max {
-                    *sample = clip_max
-                }
-                if clip_min != 0.0 && *sample > clip_min {
-                    *sample = clip_min
-                }
+                // if clip_max != 0.0 && *sample < clip_max {
+                // *sample = clip_max
+                // }
+                // if clip_min != 0.0 && *sample > clip_min {
+                // *sample = clip_min
+                // }
             }
         }
 
