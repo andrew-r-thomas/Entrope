@@ -12,11 +12,11 @@ pub struct EntropeRust {
 
 #[derive(Params)]
 struct EntropeRustParams {
-    #[id = "crush"]
-    pub crush: FloatParam,
+    #[id = "bit_rate"]
+    pub bit_rate: FloatParam,
 
-    #[id = "redux"]
-    pub redux: IntParam,
+    #[id = "sample_rate"]
+    pub sample_rate: IntParam,
 
     #[id = "entropy"]
     pub entropy: IntParam,
@@ -43,15 +43,15 @@ impl Default for EntropeRustParams {
             // This gain is stored as linear gain. NIH-plug comes with useful conversion functions
             // to treat these kinds of parameters as if we were dealing with decibels. Storing this
             // as decibels is easier to work with, but requires a conversion for every sample.
-            crush: FloatParam::new(
-                "Crush",
+            bit_rate: FloatParam::new(
+                "bit rate",
                 32.0,
                 FloatRange::Linear {
                     min: 2.0,
                     max: 32.0,
                 },
             ),
-            redux: IntParam::new("Redux", 1, IntRange::Linear { min: 1, max: 100 }),
+            sample_rate: IntParam::new("sample rate", 1, IntRange::Linear { min: 1, max: 100 }),
             entropy: IntParam::new("Entropy", 1, IntRange::Linear { min: 1, max: 100 }),
             // clip: FloatParam::new("Clip", 1.0, FloatRange::Linear { min: 0.0, max: 1.0 }),
         }
@@ -123,17 +123,17 @@ impl Plugin for EntropeRust {
         _aux: &mut AuxiliaryBuffers,
         context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
-        let mut crush = self.params.crush.value();
-        let redux = self.params.redux.value();
+        let mut bit_rate = self.params.bit_rate.value();
+        let sample_rate = self.params.sample_rate.value();
+        let current_rate = context.transport().sample_rate;
         let entropy = self.params.entropy.value();
         // let clip = self.params.clip.value();
         // let mut clip_max = 0.0;
         // let mut clip_min = 0.0;
-        let current_rate = context.transport().sample_rate;
 
         if entropy > 1 {
             let n = self.gen.gen_range(1..entropy);
-            crush = crush / n as f32;
+            bit_rate = bit_rate / n as f32;
             //redux = redux * n;
         }
 
@@ -159,14 +159,14 @@ impl Plugin for EntropeRust {
         for (i, channel_samples) in buffer.iter_samples().enumerate() {
             for sample in channel_samples.into_iter() {
                 let base: f32 = 2.0;
-                let total_q_levels = base.powf(crush);
+                let total_q_levels = base.powf(bit_rate);
 
                 let remainder = *sample % (1.0 / total_q_levels);
 
                 *sample -= remainder;
 
-                if redux > 1 {
-                    let modulo = i as i32 % redux;
+                if sample_rate > 1 {
+                    let modulo = i as i32 % sample_rate;
                     if modulo != 0 {
                         *sample = reduced;
                     } else {
