@@ -13,7 +13,7 @@ pub struct EntropeRust {
 #[derive(Params)]
 struct EntropeRustParams {
     #[id = "bit_rate"]
-    pub bit_rate: FloatParam,
+    pub bit_rate: IntParam,
 
     #[id = "sample_rate"]
     pub sample_rate: IntParam,
@@ -43,14 +43,7 @@ impl Default for EntropeRustParams {
             // This gain is stored as linear gain. NIH-plug comes with useful conversion functions
             // to treat these kinds of parameters as if we were dealing with decibels. Storing this
             // as decibels is easier to work with, but requires a conversion for every sample.
-            bit_rate: FloatParam::new(
-                "bit rate",
-                32.0,
-                FloatRange::Linear {
-                    min: 2.0,
-                    max: 32.0,
-                },
-            ),
+            bit_rate: IntParam::new("bit rate", 32, IntRange::Linear { min: 2, max: 32 }),
             sample_rate: IntParam::new("sample rate", 1, IntRange::Linear { min: 1, max: 100 }),
             entropy: IntParam::new("Entropy", 1, IntRange::Linear { min: 1, max: 100 }),
             // clip: FloatParam::new("Clip", 1.0, FloatRange::Linear { min: 0.0, max: 1.0 }),
@@ -133,7 +126,7 @@ impl Plugin for EntropeRust {
 
         if entropy > 1 {
             let n = self.gen.gen_range(1..entropy);
-            bit_rate = bit_rate / n as f32;
+            bit_rate = bit_rate / n;
             //redux = redux * n;
         }
 
@@ -158,10 +151,10 @@ impl Plugin for EntropeRust {
 
         for (i, channel_samples) in buffer.iter_samples().enumerate() {
             for sample in channel_samples.into_iter() {
-                let base: f32 = 2.0;
-                let total_q_levels = base.powf(bit_rate);
+                let base: u32 = 2;
+                let total_q_levels = base.pow(bit_rate as u32);
 
-                let remainder = *sample % (1.0 / total_q_levels);
+                let remainder = *sample % (1.0 / total_q_levels as f32);
 
                 *sample -= remainder;
 
