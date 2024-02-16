@@ -13,7 +13,7 @@ pub struct EntropeRust {
 #[derive(Params)]
 struct EntropeRustParams {
     #[id = "bit_rate"]
-    pub bit_rate: IntParam,
+    pub bit_depth: IntParam,
 
     #[id = "sample_rate"]
     pub sample_rate: IntParam,
@@ -43,9 +43,9 @@ impl Default for EntropeRustParams {
             // This gain is stored as linear gain. NIH-plug comes with useful conversion functions
             // to treat these kinds of parameters as if we were dealing with decibels. Storing this
             // as decibels is easier to work with, but requires a conversion for every sample.
-            bit_rate: IntParam::new("bit rate", 32, IntRange::Linear { min: 2, max: 32 }),
+            bit_depth: IntParam::new("bit rate", 24, IntRange::Linear { min: 2, max: 24 }),
             sample_rate: IntParam::new("sample rate", 1, IntRange::Linear { min: 1, max: 100 }),
-            entropy: IntParam::new("Entropy", 1, IntRange::Linear { min: 1, max: 100 }),
+            entropy: IntParam::new("Entropy", 0, IntRange::Linear { min: 0, max: 100 }),
             // clip: FloatParam::new("Clip", 1.0, FloatRange::Linear { min: 0.0, max: 1.0 }),
         }
     }
@@ -116,18 +116,18 @@ impl Plugin for EntropeRust {
         _aux: &mut AuxiliaryBuffers,
         context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
-        let mut bit_rate = self.params.bit_rate.value();
+        let mut bit_depth = self.params.bit_depth.value();
         let sample_rate = self.params.sample_rate.value();
-        let current_rate = context.transport().sample_rate;
+        let current_sample_rate = context.transport().sample_rate;
         let entropy = self.params.entropy.value();
         // let clip = self.params.clip.value();
         // let mut clip_max = 0.0;
         // let mut clip_min = 0.0;
 
-        if entropy > 1 {
-            let n = self.gen.gen_range(1..entropy);
-            bit_rate = bit_rate / n;
-            //redux = redux * n;
+        if entropy > 0 {
+            let n = self.gen.gen_range(0..=entropy);
+            let perc = n * (1 - (entropy / 101));
+            bit_depth = bit_depth * perc;
         }
 
         // if clip < 1.0 {
@@ -149,11 +149,11 @@ impl Plugin for EntropeRust {
         // TODO still kinda seems like this is happening per channel
         let mut reduced: f32 = 0.0;
 
+        let base: u32 = 2;
+        let total_q_levels = base.pow(bit_depth as u32);
+
         for (i, channel_samples) in buffer.iter_samples().enumerate() {
             for sample in channel_samples.into_iter() {
-                let base: u32 = 2;
-                let total_q_levels = base.pow(bit_rate as u32);
-
                 let remainder = *sample % (1.0 / total_q_levels as f32);
 
                 *sample -= remainder;

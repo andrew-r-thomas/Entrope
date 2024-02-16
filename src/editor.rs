@@ -42,7 +42,7 @@ pub(crate) fn create(
                 .child_bottom(Pixels(0.0));
 
             Label::new(cx, "Crush");
-            ParamSlider::new(cx, Data::params, |params| &params.bit_rate);
+            ParamSlider::new(cx, Data::params, |params| &params.bit_depth);
             Label::new(cx, "Redux");
             ParamSlider::new(cx, Data::params, |params| &params.sample_rate);
             Label::new(cx, "Entropy");
