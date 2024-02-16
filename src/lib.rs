@@ -125,9 +125,9 @@ impl Plugin for EntropeRust {
         // let mut clip_min = 0.0;
 
         if entropy > 0 {
-            let n = self.gen.gen_range(0..=entropy);
-            let perc = n * (1 - (entropy / 101));
-            bit_depth = bit_depth * perc;
+            let new = entropy + 100;
+            let n = self.gen.gen_range(0..=new);
+            bit_depth = bit_depth * (1 - (n / 100));
         }
 
         // if clip < 1.0 {
